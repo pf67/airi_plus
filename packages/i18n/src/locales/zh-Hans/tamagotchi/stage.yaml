@@ -12,6 +12,8 @@ docs:
   'fade-on-hover':
     enable: 悬停时隐藏
     disable: 总是显示
+  'hide-character': 隐藏角色
+  'show-character': 显示角色
   'open-settings': 打开设置
   'open-chat': 打开聊天
   'refresh': 刷新

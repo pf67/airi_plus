@@ -263,6 +263,33 @@ export const useChatSessionStore = defineStore('chat-session', () => {
         sessionMessages.value[sessionId] = stored.messages
         ensureGeneration(sessionId)
       }
+      else {
+        // 如果数据库中没有 session，但 index 中有引用，创建一个新的 meta
+        const characterId = getCurrentCharacterId()
+        const currentUserId = getCurrentUserId()
+        const existingMeta = sessionMetas.value[sessionId]
+
+        if (!existingMeta) {
+          // 创建新的 meta
+          const now = Date.now()
+          const newMeta: ChatSessionMeta = {
+            sessionId,
+            userId: currentUserId,
+            characterId,
+            createdAt: now,
+            updatedAt: now,
+          }
+          sessionMetas.value[sessionId] = newMeta
+
+          // 更新 index
+          if (index.value?.userId === currentUserId) {
+            const characterIndex = index.value.characters[characterId]
+            if (characterIndex) {
+              characterIndex.sessions[sessionId] = newMeta
+            }
+          }
+        }
+      }
       loadedSessions.add(sessionId)
     })()
 

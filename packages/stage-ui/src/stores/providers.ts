@@ -1757,15 +1757,16 @@ export const useProvidersStore = defineStore('providers', () => {
     if (!metadata)
       return false
 
-    // Web Speech API doesn't require credentials - use empty config if not present
-    if (providerId === 'browser-web-speech-api') {
+    // Some providers don't require credentials - use empty config if not present
+    const noCredentialProviders = ['browser-web-speech-api', 'speech-noop']
+    if (noCredentialProviders.includes(providerId)) {
       if (!providerCredentials.value[providerId]) {
         providerCredentials.value[providerId] = getDefaultProviderConfig(providerId)
       }
     }
 
     const config = providerCredentials.value[providerId]
-    if (!config && providerId !== 'browser-web-speech-api')
+    if (!config && !noCredentialProviders.includes(providerId))
       return false
 
     const configString = JSON.stringify(config || {})
@@ -1789,8 +1790,8 @@ export const useProvidersStore = defineStore('providers', () => {
       if (providerRuntimeState.value[providerId]) {
         providerRuntimeState.value[providerId].isConfigured = validationResult.valid
         providerRuntimeState.value[providerId].validatedCredentialHash = configString
-        // Auto-mark Web Speech API as added if valid and available
-        if (validationResult.valid && ['browser-web-speech-api', 'player2'].includes(providerId)) {
+        // Auto-mark providers that don't require user configuration as added if valid
+        if (validationResult.valid && ['browser-web-speech-api', 'player2', 'speech-noop'].includes(providerId)) {
           markProviderAdded(providerId)
         }
       }

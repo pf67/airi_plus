@@ -14,7 +14,7 @@ import { ipcMain } from 'electron'
 import { electronOpenChat, electronOpenMainDevtools, electronOpenSettings, noticeWindowEventa } from '../../../../shared/eventa'
 import { createMcpServersService } from '../../../services/airi/mcp-servers'
 import { createWidgetsService } from '../../../services/airi/widgets'
-import { createAutoUpdaterService } from '../../../services/electron'
+import { createAutoUpdaterService, createHeartbeatService } from '../../../services/electron'
 import { toggleWindowShow } from '../../shared'
 import { setupBaseWindowElectronInvokes } from '../../shared/window'
 
@@ -40,6 +40,7 @@ export async function setupMainWindowElectronInvokes(params: {
   createWidgetsService({ context, widgetsManager: params.widgetsManager, window: params.window })
   createAutoUpdaterService({ context, window: params.window, service: params.autoUpdater })
   createMcpServersService({ context, manager: params.mcpStdioManager })
+  createHeartbeatService({ context, window: params.window })
 
   defineInvokeHandler(context, electronOpenMainDevtools, () => params.window.webContents.openDevTools({ mode: 'detach' }))
   defineInvokeHandler(context, electronOpenSettings, async () => toggleWindowShow(await params.settingsWindow()))

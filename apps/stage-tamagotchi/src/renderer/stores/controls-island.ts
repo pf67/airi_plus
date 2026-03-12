@@ -6,6 +6,9 @@ export const useControlsIslandStore = defineStore('controls-island', () => {
   const fadeOnHoverEnabled = useLocalStorage<boolean>('controls-island/fade-on-hover-enabled', false)
   const dontShowItAgainNoticeFadeOnHover = useLocalStorage<boolean>('preferences/dont-show-it-again/notice/fade-on-hover', false)
 
+  // Manual hide state - hides the character but keeps controls visible
+  const manuallyHidden = useLocalStorage<boolean>('controls-island/manually-hidden', false)
+
   function enableFadeOnHover() {
     fadeOnHoverEnabled.value = true
   }
@@ -14,10 +17,26 @@ export const useControlsIslandStore = defineStore('controls-island', () => {
     fadeOnHoverEnabled.value = false
   }
 
+  function toggleManualHide() {
+    manuallyHidden.value = !manuallyHidden.value
+  }
+
+  function showCharacter() {
+    manuallyHidden.value = false
+  }
+
+  function hideCharacter() {
+    manuallyHidden.value = true
+  }
+
   return {
     fadeOnHoverEnabled,
     dontShowItAgainNoticeFadeOnHover,
+    manuallyHidden,
     enableFadeOnHover,
     disableFadeOnHover,
+    toggleManualHide,
+    showCharacter,
+    hideCharacter,
   }
 })

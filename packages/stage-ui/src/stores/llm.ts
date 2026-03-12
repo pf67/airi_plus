@@ -42,6 +42,37 @@ function streamOptionsToolsCompatibilityOk(model: string, chatProvider: ChatProv
   return !!(options?.supportsTools || options?.toolsCompatibility?.get(`${chatProvider.chat(model).baseURL}-${model}`))
 }
 
+/**
+ * Wrap tools with per-session execution deduplication.
+ *
+ * xsai's `streamText` with `maxSteps` re-sends the conversation to the LLM
+ * after each tool-call round.  Some models loop and request the exact same
+ * tool with the exact same arguments again.  Without a guard the tool's
+ * `execute` fires every time, causing 3-4× duplicate backend requests.
+ *
+ * The cache is keyed by `toolName + JSON(args)` and lives only for the
+ * duration of a single `streamFrom` invocation, so it never leaks across
+ * independent chat turns.
+ */
+function deduplicateTools(rawTools: Tool[]): Tool[] {
+  const cache = new Map<string, unknown>()
+
+  return rawTools.map(t => ({
+    ...t,
+    execute: async (args: unknown, ctx: unknown) => {
+      const key = `${t.function.name}:${JSON.stringify(args)}`
+      if (cache.has(key)) {
+        console.warn(`[tool-dedup] Skipping duplicate call: ${t.function.name}`, args)
+        return cache.get(key)
+      }
+
+      const result = await (t as any).execute(args, ctx)
+      cache.set(key, result)
+      return result
+    },
+  }))
+}
+
 async function streamFrom(model: string, chatProvider: ChatProvider, messages: Message[], options?: StreamOptions) {
   const headers = options?.headers
   const chatConfig = chatProvider.chat(model)
@@ -56,11 +87,11 @@ async function streamFrom(model: string, chatProvider: ChatProvider, messages: M
 
   const supportedTools = streamOptionsToolsCompatibilityOk(model, chatProvider, messages, options)
   const tools = supportedTools
-    ? [
+    ? deduplicateTools([
         ...await mcp(),
         ...await debug(),
         ...await resolveTools(),
-      ]
+      ])
     : undefined
 
   return new Promise<void>((resolve, reject) => {

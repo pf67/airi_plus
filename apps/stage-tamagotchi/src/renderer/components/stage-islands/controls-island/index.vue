@@ -12,6 +12,7 @@ import ControlButtonTooltip from './control-button-tooltip.vue'
 import ControlButton from './control-button.vue'
 import ControlsIslandFadeOnHover from './controls-island-fade-on-hover.vue'
 import ControlsIslandHearingConfig from './controls-island-hearing-config.vue'
+import ControlsIslandManualHide from './controls-island-manual-hide.vue'
 import IndicatorMicVolume from './indicator-mic-volume.vue'
 
 import {
@@ -164,6 +165,8 @@ function refreshWindow() {
             </ControlButtonTooltip>
 
             <ControlsIslandFadeOnHover :icon-class="adjustStyleClasses.icon" :button-style="adjustStyleClasses.button" />
+
+            <ControlsIslandManualHide :icon-class="adjustStyleClasses.icon" :button-style="adjustStyleClasses.button" />
 
             <ControlButtonTooltip>
               <ControlButton :button-style="adjustStyleClasses.button" hover:bg-red-500 hover:text-white @click="closeWindow()">

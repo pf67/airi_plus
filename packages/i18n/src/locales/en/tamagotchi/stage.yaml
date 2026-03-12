@@ -12,6 +12,8 @@ docs:
   'fade-on-hover':
     enable: Auto hide
     disable: Always show
+  'hide-character': Hide Character
+  'show-character': Show Character
   'open-settings': Open settings
   'open-chat': Open Chat
   'refresh': Refresh

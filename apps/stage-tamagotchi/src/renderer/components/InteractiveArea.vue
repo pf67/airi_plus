@@ -4,17 +4,23 @@ import type { ChatProvider } from '@xsai-ext/providers/utils'
 
 import { ChatHistory } from '@proj-airi/stage-ui/components'
 import { useChatOrchestratorStore } from '@proj-airi/stage-ui/stores/chat'
+import { setHeartbeatConfigProvider, useChatHeartbeatStore } from '@proj-airi/stage-ui/stores/chat/heartbeat-store'
 import { useChatMaintenanceStore } from '@proj-airi/stage-ui/stores/chat/maintenance'
 import { useChatSessionStore } from '@proj-airi/stage-ui/stores/chat/session-store'
 import { useChatStreamStore } from '@proj-airi/stage-ui/stores/chat/stream-store'
 import { useConsciousnessStore } from '@proj-airi/stage-ui/stores/modules/consciousness'
 import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
 import { BasicTextarea } from '@proj-airi/ui'
+import { nanoid } from 'nanoid'
 import { storeToRefs } from 'pinia'
-import { computed, ref, watch } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import { createElectronHeartbeatConfigProvider } from '../composables/heartbeat-config'
 import { widgetsTools } from '../stores/tools/builtin/widgets'
+
+// 注入 Electron 心跳配置提供者
+setHeartbeatConfigProvider(createElectronHeartbeatConfigProvider())
 
 const messageInput = ref('')
 const attachments = ref<{ type: 'image', data: string, mimeType: string, url: string }[]>([])
@@ -22,6 +28,7 @@ const attachments = ref<{ type: 'image', data: string, mimeType: string, url: st
 const chatOrchestrator = useChatOrchestratorStore()
 const chatSession = useChatSessionStore()
 const chatStream = useChatStreamStore()
+const chatHeartbeat = useChatHeartbeatStore()
 const { cleanupMessages } = useChatMaintenanceStore()
 const { ingest, onAfterMessageComposed, discoverToolsCompatibility } = chatOrchestrator
 const { messages } = storeToRefs(chatSession)
@@ -67,10 +74,13 @@ async function handleSend() {
       ...att,
       url: URL.createObjectURL(new Blob([Uint8Array.from(atob(att.data), c => c.charCodeAt(0))], { type: att.mimeType })),
     }))
-    messages.value.pop()
+    // 不要 pop，因为用户消息可能还没有被添加
+    // 直接添加错误消息
     messages.value.push({
       role: 'error',
       content: (error as Error).message,
+      id: nanoid(),
+      createdAt: Date.now(),
     })
   }
 }
@@ -105,9 +115,23 @@ function removeAttachment(index: number) {
 
 watch([activeProvider, activeModel], async () => {
   if (activeProvider.value && activeModel.value) {
-    await discoverToolsCompatibility(activeModel.value, await providersStore.getProviderInstance<ChatProvider>(activeProvider.value), [])
+    const chatProvider = await providersStore.getProviderInstance<ChatProvider>(activeProvider.value)
+    await discoverToolsCompatibility(activeModel.value, chatProvider, [])
+
+    // 启用或更新心跳机制
+    const providerConfig = providersStore.getProviderConfig(activeProvider.value)
+    chatHeartbeat.enableHeartbeat({
+      model: activeModel.value,
+      chatProvider,
+      providerConfig,
+    })
   }
 }, { immediate: true })
+
+// 组件卸载时禁用心跳
+onUnmounted(() => {
+  chatHeartbeat.disableHeartbeat()
+})
 
 onAfterMessageComposed(async () => {
   messageInput.value = ''

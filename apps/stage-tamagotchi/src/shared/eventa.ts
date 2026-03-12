@@ -208,5 +208,12 @@ export const widgetsUpdateEvent = defineEventa<{ id: string, componentProps?: Re
 export const i18nSetLocale = defineInvokeEventa<void, Locale>('eventa:invoke:electron:i18n:set-locale')
 export const i18nGetLocale = defineInvokeEventa<Locale>('eventa:invoke:electron:i18n:get-locale')
 
+// Heartbeat config
+export interface HeartbeatConfig {
+  current_interval: number
+  prompt: string
+}
+export const electronGetHeartbeatConfig = defineInvokeEventa<HeartbeatConfig>('eventa:invoke:electron:heartbeat:get-config')
+
 export { electron } from '@proj-airi/electron-eventa'
 export * from '@proj-airi/electron-eventa/electron-updater'

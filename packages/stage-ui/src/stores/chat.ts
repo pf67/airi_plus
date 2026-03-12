@@ -15,6 +15,7 @@ import { useLlmmarkerParser } from '../composables/llm-marker-parser'
 import { categorizeResponse, createStreamingCategorizer } from '../composables/response-categoriser'
 import { createDatetimeContext } from './chat/context-providers'
 import { useChatContextStore } from './chat/context-store'
+import { SILENCE_PATTERN, useChatHeartbeatStore } from './chat/heartbeat-store'
 import { createChatHooks } from './chat/hooks'
 import { useChatSessionStore } from './chat/session-store'
 import { useChatStreamStore } from './chat/stream-store'
@@ -43,6 +44,7 @@ interface QueuedSend {
   generation: number
   sessionId: string
   cancelled?: boolean
+  isHeartbeat?: boolean
   deferred: {
     resolve: () => void
     reject: (error: unknown) => void
@@ -68,7 +70,7 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
   const sendQueue = createQueue<QueuedSend>({
     handlers: [
       async ({ data }) => {
-        const { sendingMessage, options, generation, deferred, sessionId, cancelled } = data
+        const { sendingMessage, options, generation, deferred, sessionId, cancelled, isHeartbeat } = data
 
         if (cancelled)
           return
@@ -79,7 +81,7 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
         }
 
         try {
-          await performSend(sendingMessage, options, generation, sessionId)
+          await performSend(sendingMessage, options, generation, sessionId, isHeartbeat)
           deferred.resolve()
         }
         catch (error) {
@@ -102,6 +104,7 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
     options: SendOptions,
     generation: number,
     sessionId: string,
+    isHeartbeat: boolean = false,
   ) {
     if (!sendingMessage && !options.attachments?.length)
       return
@@ -113,7 +116,7 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
 
     const sendingCreatedAt = Date.now()
     const streamingMessageContext: ChatStreamEventContext = {
-      message: { role: 'user', content: sendingMessage, createdAt: sendingCreatedAt, id: nanoid() },
+      message: { role: 'user', content: sendingMessage, createdAt: sendingCreatedAt, id: nanoid(), isHidden: isHeartbeat },
       contexts: chatContext.getContextsSnapshot(),
       composedMessage: [],
       input: options.input,
@@ -128,7 +131,16 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
 
     const isForegroundSession = () => sessionId === activeSessionId.value
 
-    const buildingMessage: StreamingAssistantMessage = { role: 'assistant', content: '', slices: [], tool_results: [], createdAt: Date.now(), id: nanoid() }
+    const buildingMessage: StreamingAssistantMessage = {
+      role: 'assistant',
+      content: '',
+      slices: [],
+      tool_results: [],
+      createdAt: Date.now(),
+      id: nanoid(),
+      isHidden: isHeartbeat, // 心跳消息的回复也默认标记为隐藏
+      isHeartbeat,
+    }
 
     const updateUI = () => {
       if (isForegroundSession()) {
@@ -171,7 +183,7 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
         return
 
       const sessionMessagesForSend = chatSession.getSessionMessages(sessionId)
-      sessionMessagesForSend.push({ role: 'user', content: finalContent, createdAt: sendingCreatedAt, id: nanoid() })
+      sessionMessagesForSend.push({ role: 'user', content: finalContent, createdAt: sendingCreatedAt, id: nanoid(), isHidden: isHeartbeat })
       chatSession.persistSessionMessages(sessionId)
 
       const categorizer = createStreamingCategorizer(activeProvider.value)
@@ -246,11 +258,11 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
       })
 
       let newMessages = sessionMessagesForSend.map((msg) => {
-        const { context: _context, id: _id, createdAt: _createdAt, ...withoutContext } = msg
+        const { context: _context, id: _id, createdAt: _createdAt, isHidden: _isHidden, ...withoutContext } = msg
         const rawMessage = toRaw(withoutContext)
 
         if (rawMessage.role === 'assistant') {
-          const { slices: _slices, tool_results: _toolResults, categorization: _categorization, ...rest } = rawMessage as ChatAssistantMessage
+          const { slices: _slices, tool_results: _toolResults, categorization: _categorization, isHeartbeat: _isHeartbeat, ...rest } = rawMessage as ChatAssistantMessage
           return toRaw(rest)
         }
 
@@ -327,8 +339,32 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
 
       await parser.end()
 
-      if (!isStaleGeneration() && buildingMessage.slices.length > 0) {
-        sessionMessagesForSend.push(toRaw(buildingMessage))
+      // 心跳消息的 silence 检测
+      // 如果 LLM 回复纯 <silence>，则丢弃这条回复，不添加到消息历史
+      const isSilenceResponse = isHeartbeat && SILENCE_PATTERN.test(fullText.trim())
+
+      if (isSilenceResponse) {
+        // 移除心跳触发消息（用户消息）
+        const heartbeatUserMsgIndex = sessionMessagesForSend.findIndex(
+          msg => msg.createdAt === sendingCreatedAt && msg.isHidden,
+        )
+        if (heartbeatUserMsgIndex !== -1) {
+          sessionMessagesForSend.splice(heartbeatUserMsgIndex, 1)
+          chatSession.persistSessionMessages(sessionId)
+        }
+        // 不保存任何消息到会话历史
+        console.log('[Heartbeat] LLM responded with <silence>, skipping message display')
+      }
+      else if (!isStaleGeneration()) {
+        // 非心跳或非silence回复，正常处理
+        // 如果是心跳但有实际回复，取消隐藏标记以便显示
+        if (isHeartbeat) {
+          buildingMessage.isHidden = false
+        }
+        // 只要有内容（文本或工具调用），就保存消息
+        if (buildingMessage.slices.length > 0 || buildingMessage.tool_results.length > 0) {
+          sessionMessagesForSend.push(toRaw(buildingMessage))
+        }
         chatSession.persistSessionMessages(sessionId)
       }
 
@@ -361,6 +397,10 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
     options: SendOptions,
     targetSessionId?: string,
   ) {
+    // 用户发送消息时重置心跳定时器
+    const heartbeatStore = useChatHeartbeatStore()
+    heartbeatStore.onUserActivity()
+
     const sessionId = targetSessionId || activeSessionId.value
     const generation = chatSession.getSessionGeneration(sessionId)
 
@@ -370,6 +410,26 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
         options,
         generation,
         sessionId,
+        deferred: { resolve, reject },
+      })
+    })
+  }
+
+  async function ingestHeartbeat(
+    sendingMessage: string,
+    options: SendOptions,
+    targetSessionId?: string,
+  ) {
+    const sessionId = targetSessionId || activeSessionId.value
+    const generation = chatSession.getSessionGeneration(sessionId)
+
+    return new Promise<void>((resolve, reject) => {
+      sendQueue.enqueue({
+        sendingMessage,
+        options,
+        generation,
+        sessionId,
+        isHeartbeat: true,
         deferred: { resolve, reject },
       })
     })
@@ -413,6 +473,7 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
     discoverToolsCompatibility: llmStore.discoverToolsCompatibility,
 
     ingest,
+    ingestHeartbeat,
     ingestOnFork,
     cancelPendingSends,
 

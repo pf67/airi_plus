@@ -80,7 +80,7 @@ const setIgnoreMouseEvents = useElectronEventaInvoke(electron.window.setIgnoreMo
 
 const { scale, positionInPercentageString } = storeToRefs(useLive2d())
 const { live2dLookAtX, live2dLookAtY } = storeToRefs(useWindowStore())
-const { fadeOnHoverEnabled } = storeToRefs(useControlsIslandStore())
+const { fadeOnHoverEnabled, manuallyHidden } = storeToRefs(useControlsIslandStore())
 
 watch(componentStateStage, () => isLoading.value = componentStateStage.value !== 'mounted', { immediate: true })
 
@@ -90,7 +90,7 @@ const { pause, resume } = watch(isTransparent, (transparent) => {
 
 const hearingDialogOpen = computed(() => controlsIslandRef.value?.hearingDialogOpen ?? false)
 
-watch([isOutsideFor250Ms, isAroundWindowBorderFor250Ms, isOutsideWindow, isTransparent, hearingDialogOpen, fadeOnHoverEnabled], () => {
+watch([isOutsideFor250Ms, isAroundWindowBorderFor250Ms, isOutsideWindow, isTransparent, hearingDialogOpen, fadeOnHoverEnabled, manuallyHidden], () => {
   if (hearingDialogOpen.value) {
     // Hearing dialog/drawer is open; keep window interactive
     isIgnoringMouseEvents.value = false
@@ -112,11 +112,13 @@ watch([isOutsideFor250Ms, isAroundWindowBorderFor250Ms, isOutsideWindow, isTrans
   }
   else {
     const fadeEnabled = fadeOnHoverEnabled.value
+    const hidden = manuallyHidden.value
     // Otherwise allow click-through while we fade UI based on transparency (when enabled)
-    isIgnoringMouseEvents.value = fadeEnabled
+    // Also allow click-through when manually hidden
+    isIgnoringMouseEvents.value = fadeEnabled || hidden
     shouldFadeOnCursorWithin.value = fadeEnabled && !isOutsideWindow.value && !isTransparent.value
-    setIgnoreMouseEvents([fadeEnabled, { forward: true }])
-    if (fadeEnabled)
+    setIgnoreMouseEvents([fadeEnabled || hidden, { forward: true }])
+    if (fadeEnabled || hidden)
       resume()
     else
       pause()
@@ -331,18 +333,20 @@ watch([stream, () => vadLoaded.value], async ([s, loaded]) => {
     >
       <div
         :class="[
-          shouldFadeOnCursorWithin ? 'op-0' : 'op-100',
           'absolute',
           'top-0 left-0 w-full h-full',
           'overflow-hidden',
           'rounded-2xl',
-          'transition-opacity duration-250 ease-in-out',
         ]"
       >
         <ResourceStatusIsland />
         <WidgetStage
           ref="widgetStageRef"
           v-model:state="componentStateStage"
+          :class="[
+            (shouldFadeOnCursorWithin || manuallyHidden) ? 'op-0' : 'op-100',
+            'transition-opacity duration-250 ease-in-out',
+          ]"
           h-full w-full
           flex-1
           :focus-at="{ x: live2dLookAtX, y: live2dLookAtY }"

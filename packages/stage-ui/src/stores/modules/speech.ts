@@ -129,14 +129,28 @@ export const useSpeechStore = defineStore('speech', () => {
   }
 
   watch(
-    () => providersStore.configuredSpeechProvidersMetadata.map(provider => provider.id),
-    (configuredProviderIds) => {
+    () => providersStore.persistedSpeechProvidersMetadata.map(provider => provider.id),
+    (persistedProviderIds) => {
       if (!activeSpeechProvider.value)
         return
 
+      // Skip reset when provider metadata hasn't loaded yet.
+      // availableProvidersMetadata is a computedAsync that starts as [],
+      // so allAudioSpeechProvidersMetadata will be empty until it resolves.
+      // Without this guard the watcher fires before providers are known and
+      // incorrectly resets the persisted selection to 'speech-noop'.
+      if (allAudioSpeechProvidersMetadata.value.length === 0)
+        return
+
       // NOTICE: clear stale selection when the currently selected speech provider
-      // is no longer configured to avoid implicit fallback behavior from persisted state.
-      if (!configuredProviderIds.includes(activeSpeechProvider.value)) {
+      // is no longer persisted (not added by user and not configured) to avoid
+      // implicit fallback behavior from persisted state.
+      // We also check configured providers to handle the case where validation
+      // is still in progress.
+      const configuredProviderIds = providersStore.configuredSpeechProvidersMetadata.map(p => p.id)
+      const allValidProviderIds = new Set([...persistedProviderIds, ...configuredProviderIds, 'speech-noop'])
+
+      if (!allValidProviderIds.has(activeSpeechProvider.value)) {
         activeSpeechProvider.value = 'speech-noop'
         activeSpeechModel.value = ''
         activeSpeechVoiceId.value = ''

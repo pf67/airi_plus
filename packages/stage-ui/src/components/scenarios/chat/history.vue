@@ -45,7 +45,7 @@ watch([() => props.messages, () => props.streamingMessage], scrollToBottom, { de
 watch(() => props.sending, scrollToBottom, { flush: 'post' })
 onMounted(scrollToBottom)
 
-const streaming = computed<ChatAssistantMessage & { context?: ContextMessage } & { createdAt?: number }>(() => props.streamingMessage ?? { role: 'assistant', content: '', slices: [], tool_results: [], createdAt: Date.now() })
+const streaming = computed<ChatAssistantMessage & { context?: ContextMessage } & { createdAt?: number, isHidden?: boolean }>(() => props.streamingMessage ?? { role: 'assistant', content: '', slices: [], tool_results: [], createdAt: Date.now() })
 const showStreamingPlaceholder = computed(() => (streaming.value.slices?.length ?? 0) === 0 && !streaming.value.content)
 const streamingTs = computed(() => streaming.value?.createdAt)
 function shouldShowPlaceholder(message: ChatHistoryItem) {
@@ -56,18 +56,26 @@ function shouldShowPlaceholder(message: ChatHistoryItem) {
   return message.context?.createdAt === ts || message.createdAt === ts
 }
 const renderMessages = computed<ChatHistoryItem[]>(() => {
+  // 过滤掉隐藏消息（如心跳消息）
+  const visibleMessages = props.messages.filter(msg => !msg.isHidden)
+
   if (!props.sending)
-    return props.messages
+    return visibleMessages
 
   const streamTs = streamingTs.value
   if (!streamTs)
-    return props.messages
+    return visibleMessages
 
-  const hasStreamAlready = streamTs && props.messages.some(msg => msg?.role === 'assistant' && msg?.createdAt === streamTs)
+  // 如果流消息是隐藏的，不添加到渲染列表
+  if (streaming.value.isHidden) {
+    return visibleMessages
+  }
+
+  const hasStreamAlready = streamTs && visibleMessages.some(msg => msg?.role === 'assistant' && msg?.createdAt === streamTs)
   if (hasStreamAlready)
-    return props.messages
+    return visibleMessages
 
-  return [...props.messages, streaming.value]
+  return [...visibleMessages, streaming.value]
 })
 </script>
 
