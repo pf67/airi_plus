@@ -1,0 +1,12 @@
+diff --git a/dist/adapters/electron/main.mjs b/dist/adapters/electron/main.mjs
+index 26cf353c19df2a18f4a3b74820d5390b738eb633..c725dfe07b02d782ea0261fe94093969d4222e59 100644
+--- a/dist/adapters/electron/main.mjs
++++ b/dist/adapters/electron/main.mjs
+@@ -33,6 +33,7 @@ function createContext(ipcMain, window, options) {
+ 		}
+ 	});
+ 	if (messageEventName) cleanupRemoval.push(withRemoval(ipcMain, messageEventName, (ipcMainEvent, event) => {
++		if (onlySameWindow && window != null && !window.isDestroyed() && ipcMainEvent.sender.id !== window.webContents.id) return;
+ 		try {
+ 			const { type, payload } = parsePayload(event);
+ 			ctx.emit(defineInboundEventa(type), payload.body, { raw: {
