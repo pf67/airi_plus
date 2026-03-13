@@ -265,7 +265,7 @@ overrides:
 
 patchedDependencies:
   '@moeru/eventa@1.0.0-beta.1':
-    hash: a5130bb548894dab53ecac6c156383c2a993bca5b06d25caf0eec5f77bd74dcf
+    hash: 7b1b7c4ab143be5f806e5fa4ea233dc2c326eb2bb408000e1dd1d1bf78b986ff
     path: patches/@moeru__eventa@1.0.0-beta.1.patch
   mineflayer-pathfinder:
     hash: 4bbfdca823ab48b74086e6e7d4b2f9baf5ee7c0ba9aee0c279b3c91c50bfd797
@@ -585,7 +585,7 @@ importers:
         version: 3.8.1
       '@moeru/eventa':
         specifier: ^1.0.0-beta.1
-        version: 1.0.0-beta.1(patch_hash=a5130bb548894dab53ecac6c156383c2a993bca5b06d25caf0eec5f77bd74dcf)(electron@40.6.1)(h3@2.0.1-rc.5(crossws@0.4.4(srvx@0.11.8)))
+        version: 1.0.0-beta.1(patch_hash=7b1b7c4ab143be5f806e5fa4ea233dc2c326eb2bb408000e1dd1d1bf78b986ff)(electron@40.6.1)(h3@2.0.1-rc.5(crossws@0.4.4(srvx@0.11.8)))
       '@moeru/std':
         specifier: 'catalog:'
         version: 0.1.0-beta.14
@@ -988,7 +988,7 @@ importers:
         version: 1.27.1(@cfworker/json-schema@4.1.1)(zod@4.3.6)
       '@moeru/eventa':
         specifier: ^1.0.0-beta.1
-        version: 1.0.0-beta.1(patch_hash=a5130bb548894dab53ecac6c156383c2a993bca5b06d25caf0eec5f77bd74dcf)(electron@40.6.1)(h3@2.0.1-rc.5(crossws@0.4.4(srvx@0.11.8)))
+        version: 1.0.0-beta.1(patch_hash=7b1b7c4ab143be5f806e5fa4ea233dc2c326eb2bb408000e1dd1d1bf78b986ff)(electron@40.6.1)(h3@2.0.1-rc.5(crossws@0.4.4(srvx@0.11.8)))
       '@moeru/std':
         specifier: 'catalog:'
         version: 0.1.0-beta.14
@@ -1394,7 +1394,7 @@ importers:
         version: 3.8.1
       '@moeru/eventa':
         specifier: ^1.0.0-beta.1
-        version: 1.0.0-beta.1(patch_hash=a5130bb548894dab53ecac6c156383c2a993bca5b06d25caf0eec5f77bd74dcf)(electron@40.6.1)(h3@2.0.1-rc.5(crossws@0.4.4(srvx@0.11.8)))
+        version: 1.0.0-beta.1(patch_hash=7b1b7c4ab143be5f806e5fa4ea233dc2c326eb2bb408000e1dd1d1bf78b986ff)(electron@40.6.1)(h3@2.0.1-rc.5(crossws@0.4.4(srvx@0.11.8)))
       '@moeru/std':
         specifier: 'catalog:'
         version: 0.1.0-beta.14
@@ -1989,7 +1989,7 @@ importers:
     dependencies:
       '@moeru/eventa':
         specifier: ^1.0.0-beta.1
-        version: 1.0.0-beta.1(patch_hash=a5130bb548894dab53ecac6c156383c2a993bca5b06d25caf0eec5f77bd74dcf)(electron@40.6.1)(h3@2.0.1-rc.5(crossws@0.4.4(srvx@0.11.8)))
+        version: 1.0.0-beta.1(patch_hash=7b1b7c4ab143be5f806e5fa4ea233dc2c326eb2bb408000e1dd1d1bf78b986ff)(electron@40.6.1)(h3@2.0.1-rc.5(crossws@0.4.4(srvx@0.11.8)))
       builder-util-runtime:
         specifier: 'catalog:'
         version: 9.5.1
@@ -2035,7 +2035,7 @@ importers:
     dependencies:
       '@moeru/eventa':
         specifier: ^1.0.0-beta.1
-        version: 1.0.0-beta.1(patch_hash=a5130bb548894dab53ecac6c156383c2a993bca5b06d25caf0eec5f77bd74dcf)(electron@40.6.1)(h3@2.0.1-rc.5(crossws@0.4.4(srvx@0.11.8)))
+        version: 1.0.0-beta.1(patch_hash=7b1b7c4ab143be5f806e5fa4ea233dc2c326eb2bb408000e1dd1d1bf78b986ff)(electron@40.6.1)(h3@2.0.1-rc.5(crossws@0.4.4(srvx@0.11.8)))
       '@moeru/std':
         specifier: 'catalog:'
         version: 0.1.0-beta.14
@@ -2128,7 +2128,7 @@ importers:
     dependencies:
       '@moeru/eventa':
         specifier: ^1.0.0-beta.1
-        version: 1.0.0-beta.1(patch_hash=a5130bb548894dab53ecac6c156383c2a993bca5b06d25caf0eec5f77bd74dcf)(electron@40.6.1)(h3@2.0.1-rc.5(crossws@0.4.4(srvx@0.11.8)))
+        version: 1.0.0-beta.1(patch_hash=7b1b7c4ab143be5f806e5fa4ea233dc2c326eb2bb408000e1dd1d1bf78b986ff)(electron@40.6.1)(h3@2.0.1-rc.5(crossws@0.4.4(srvx@0.11.8)))
       '@moeru/std':
         specifier: 'catalog:'
         version: 0.1.0-beta.14
@@ -2222,7 +2222,7 @@ importers:
     dependencies:
       '@moeru/eventa':
         specifier: ^1.0.0-beta.1
-        version: 1.0.0-beta.1(patch_hash=a5130bb548894dab53ecac6c156383c2a993bca5b06d25caf0eec5f77bd74dcf)(electron@40.6.1)(h3@2.0.1-rc.5(crossws@0.4.4(srvx@0.11.8)))
+        version: 1.0.0-beta.1(patch_hash=7b1b7c4ab143be5f806e5fa4ea233dc2c326eb2bb408000e1dd1d1bf78b986ff)(electron@40.6.1)(h3@2.0.1-rc.5(crossws@0.4.4(srvx@0.11.8)))
       '@moeru/std':
         specifier: 'catalog:'
         version: 0.1.0-beta.14
@@ -2325,7 +2325,7 @@ importers:
     dependencies:
       '@moeru/eventa':
         specifier: ^1.0.0-beta.1
-        version: 1.0.0-beta.1(patch_hash=a5130bb548894dab53ecac6c156383c2a993bca5b06d25caf0eec5f77bd74dcf)(electron@40.6.1)(h3@2.0.1-rc.5(crossws@0.4.4(srvx@0.11.8)))
+        version: 1.0.0-beta.1(patch_hash=7b1b7c4ab143be5f806e5fa4ea233dc2c326eb2bb408000e1dd1d1bf78b986ff)(electron@40.6.1)(h3@2.0.1-rc.5(crossws@0.4.4(srvx@0.11.8)))
       '@moeru/std':
         specifier: 'catalog:'
         version: 0.1.0-beta.14
@@ -2456,7 +2456,7 @@ importers:
         version: 3.0.2(electron@40.6.1)
       '@moeru/eventa':
         specifier: ^1.0.0-beta.1
-        version: 1.0.0-beta.1(patch_hash=a5130bb548894dab53ecac6c156383c2a993bca5b06d25caf0eec5f77bd74dcf)(electron@40.6.1)(h3@2.0.1-rc.5(crossws@0.4.4(srvx@0.11.8)))
+        version: 1.0.0-beta.1(patch_hash=7b1b7c4ab143be5f806e5fa4ea233dc2c326eb2bb408000e1dd1d1bf78b986ff)(electron@40.6.1)(h3@2.0.1-rc.5(crossws@0.4.4(srvx@0.11.8)))
       '@nekopaw/tempora':
         specifier: 'catalog:'
         version: 0.4.0-alpha.1
@@ -2480,7 +2480,7 @@ importers:
         version: 3.8.1
       '@moeru/eventa':
         specifier: ^1.0.0-beta.1
-        version: 1.0.0-beta.1(patch_hash=a5130bb548894dab53ecac6c156383c2a993bca5b06d25caf0eec5f77bd74dcf)(electron@40.6.1)(h3@2.0.1-rc.5(crossws@0.4.4(srvx@0.11.8)))
+        version: 1.0.0-beta.1(patch_hash=7b1b7c4ab143be5f806e5fa4ea233dc2c326eb2bb408000e1dd1d1bf78b986ff)(electron@40.6.1)(h3@2.0.1-rc.5(crossws@0.4.4(srvx@0.11.8)))
       '@proj-airi/audio':
         specifier: workspace:^
         version: link:../audio
@@ -3205,7 +3205,7 @@ importers:
         version: 1.2.4
       '@moeru/eventa':
         specifier: ^1.0.0-beta.1
-        version: 1.0.0-beta.1(patch_hash=a5130bb548894dab53ecac6c156383c2a993bca5b06d25caf0eec5f77bd74dcf)(electron@40.6.1)(h3@2.0.1-rc.5(crossws@0.4.4(srvx@0.11.8)))
+        version: 1.0.0-beta.1(patch_hash=7b1b7c4ab143be5f806e5fa4ea233dc2c326eb2bb408000e1dd1d1bf78b986ff)(electron@40.6.1)(h3@2.0.1-rc.5(crossws@0.4.4(srvx@0.11.8)))
       '@proj-airi/server-sdk':
         specifier: workspace:^
         version: link:../../packages/server-sdk
@@ -20201,7 +20201,7 @@ snapshots:
     optionalDependencies:
       electron: 40.6.1
 
-  '@moeru/eventa@1.0.0-beta.1(patch_hash=a5130bb548894dab53ecac6c156383c2a993bca5b06d25caf0eec5f77bd74dcf)(electron@40.6.1)(h3@2.0.1-rc.5(crossws@0.4.4(srvx@0.11.8)))':
+  '@moeru/eventa@1.0.0-beta.1(patch_hash=7b1b7c4ab143be5f806e5fa4ea233dc2c326eb2bb408000e1dd1d1bf78b986ff)(electron@40.6.1)(h3@2.0.1-rc.5(crossws@0.4.4(srvx@0.11.8)))':
     dependencies:
       nanoid: 5.1.6
       picomatch: 4.0.3
