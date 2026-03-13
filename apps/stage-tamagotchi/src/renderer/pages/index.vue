@@ -84,8 +84,8 @@ const { fadeOnHoverEnabled, manuallyHidden } = storeToRefs(useControlsIslandStor
 
 watch(componentStateStage, () => isLoading.value = componentStateStage.value !== 'mounted', { immediate: true })
 
-const { pause, resume } = watch(isTransparent, (transparent) => {
-  shouldFadeOnCursorWithin.value = fadeOnHoverEnabled.value && !transparent
+const { pause, resume } = watch([isTransparent, fadeOnHoverEnabled], ([transparent, fadeEnabled]) => {
+  shouldFadeOnCursorWithin.value = fadeEnabled && !transparent
 }, { immediate: true })
 
 const hearingDialogOpen = computed(() => controlsIslandRef.value?.hearingDialogOpen ?? false)
