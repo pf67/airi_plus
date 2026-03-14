@@ -12,6 +12,7 @@ import { ipcMain } from 'electron'
 import { electronOpenMainDevtools } from '../../../../shared/eventa'
 import { createMcpServersService } from '../../../services/airi/mcp-servers'
 import { createWidgetsService } from '../../../services/airi/widgets'
+import { createHeartbeatService } from '../../../services/electron'
 import { setupBaseWindowElectronInvokes } from '../../shared/window'
 
 export async function setupChatWindowElectronInvokes(params: {
@@ -32,6 +33,7 @@ export async function setupChatWindowElectronInvokes(params: {
 
   createWidgetsService({ context, widgetsManager: params.widgetsManager, window: params.window })
   createMcpServersService({ context, manager: params.mcpStdioManager })
+  createHeartbeatService({ context, window: params.window })
 
   defineInvokeHandler(context, electronOpenMainDevtools, () => params.window.webContents.openDevTools({ mode: 'detach' }))
 }

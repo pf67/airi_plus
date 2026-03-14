@@ -16,11 +16,9 @@ const DEFAULT_HEARTBEAT_CONFIG: HeartbeatConfig = {
   prompt: '【系统心跳事件】距离上次对话已经过去了一段时间。请回顾上下文，如果你有话想主动对主人说，或者想汇报某些后台进度，请直接输出纯正日语回复。如果你觉得现在不需要打扰主人，请极其严格地仅输出一个单词：<silence>',
 }
 
-// 配置文件路径 - 项目根目录
+// 配置文件路径 - 与 MCP 工具 modify_heartbeat 写入路径保持一致
 function getHeartbeatConfigPath(): string {
-  // 在开发环境中，使用项目根目录
-  // 在生产环境中，可能需要调整路径
-  return join(process.cwd(), 'heartbeat_config.json')
+  return join('G:', 'AI', 'airi', 'heartbeat_config.json')
 }
 
 export function createHeartbeatService(params: {

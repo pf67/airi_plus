@@ -53,37 +53,25 @@ export const useChatHeartbeatStore = defineStore('chat-heartbeat', () => {
   const isHeartbeatActive = ref(false)
   const lastHeartbeatTime = ref<number | null>(null)
   const pendingHeartbeatOptions = ref<HeartbeatOptions | null>(null)
+  // 防止 triggerHeartbeat 重入（上一轮还没结束就被调度）
+  let heartbeatInFlight = false
 
   /**
-   * 从配置源读取最新配置
+   * 从配置源读取最新配置（带超时保护，防止 IPC 挂死）
    */
   async function loadConfig(): Promise<HeartbeatConfig> {
     try {
-      const config = await globalConfigProvider()
+      const config = await Promise.race([
+        globalConfigProvider(),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('loadConfig IPC timeout (3s)')), 3000),
+        ),
+      ])
       return config
     }
     catch (error) {
-      console.error('[Heartbeat] Failed to load config:', error)
+      console.error('[💓Heartbeat] loadConfig failed:', error)
       return DEFAULT_HEARTBEAT_CONFIG
-    }
-  }
-
-  /**
-   * 应用新配置并重启定时器
-   */
-  async function applyConfigAndRestart() {
-    const config = await loadConfig()
-
-    // 更新间隔（秒 -> 毫秒）
-    heartbeatInterval.value = config.current_interval * 1000
-    heartbeatPrompt.value = config.prompt
-
-    console.log(`[Heartbeat] Config updated: interval=${config.current_interval}s`)
-
-    // 如果心跳激活中，销毁旧定时器并启动新的
-    if (isHeartbeatActive.value) {
-      clearHeartbeatTimer()
-      startHeartbeatTimer()
     }
   }
 
@@ -98,36 +86,45 @@ export const useChatHeartbeatStore = defineStore('chat-heartbeat', () => {
   }
 
   /**
-   * 启动心跳定时器
+   * 调度下一轮心跳（核心：保证定时器链永远不断）
    */
-  function startHeartbeatTimer() {
-    if (heartbeatTimer.value) {
-      clearHeartbeatTimer()
-    }
-
-    heartbeatTimer.value = setTimeout(async () => {
-      await triggerHeartbeat()
-    }, heartbeatInterval.value)
-  }
-
-  /**
-   * 重置心跳定时器
-   * 在用户发送消息时调用
-   */
-  function resetHeartbeatTimer() {
+  function scheduleNextHeartbeat() {
     clearHeartbeatTimer()
-    if (isHeartbeatActive.value && pendingHeartbeatOptions.value) {
-      startHeartbeatTimer()
-    }
-  }
-
-  /**
-   * 触发心跳消息
-   */
-  async function triggerHeartbeat() {
-    if (!pendingHeartbeatOptions.value) {
+    if (!isHeartbeatActive.value) {
+      console.log('[💓Heartbeat] scheduleNext: inactive, skip')
       return
     }
+    const ms = heartbeatInterval.value
+    console.log(`[💓Heartbeat] ⏰ scheduleNext: next fire in ${ms / 1000}s (at ${new Date(Date.now() + ms).toLocaleTimeString()})`)
+    heartbeatTimer.value = setTimeout(() => {
+      // 非 async — 用 .catch 兜底，绝不产生 unhandled rejection
+      triggerHeartbeat().catch((err) => {
+        console.error('[💓Heartbeat] triggerHeartbeat crashed:', err)
+        // 即使整个 trigger 炸了，也要保证链不断
+        scheduleNextHeartbeat()
+      })
+    }, ms)
+  }
+
+  /**
+   * 触发心跳消息（完整生命周期）
+   */
+  async function triggerHeartbeat() {
+    // 重入保护：如果上一轮还没结束，跳过本轮，直接调度下一轮
+    if (heartbeatInFlight) {
+      console.warn('[💓Heartbeat] ⚠️ previous heartbeat still in-flight, skipping this round')
+      scheduleNextHeartbeat()
+      return
+    }
+
+    if (!pendingHeartbeatOptions.value) {
+      console.warn('[💓Heartbeat] ⚠️ no pendingHeartbeatOptions, skipping')
+      scheduleNextHeartbeat()
+      return
+    }
+
+    heartbeatInFlight = true
+    console.log(`[💓Heartbeat] 🔥 FIRING heartbeat at ${new Date().toLocaleTimeString()}`)
 
     const chatOrchestrator = useChatOrchestratorStore()
     const { model, chatProvider, providerConfig } = pendingHeartbeatOptions.value
@@ -135,21 +132,32 @@ export const useChatHeartbeatStore = defineStore('chat-heartbeat', () => {
     lastHeartbeatTime.value = Date.now()
 
     try {
-      // 使用当前配置的 prompt
+      console.log('[💓Heartbeat] → calling ingestHeartbeat...')
       await chatOrchestrator.ingestHeartbeat(heartbeatPrompt.value, {
         model,
         chatProvider,
         providerConfig,
       })
+      console.log('[💓Heartbeat] ✅ ingestHeartbeat resolved (AI reply done)')
     }
     catch (error) {
-      console.error('[Heartbeat] Failed to send heartbeat:', error)
+      console.error('[💓Heartbeat] ❌ ingestHeartbeat rejected:', error)
     }
 
-    // 心跳完成后，重新读取配置并启动下一轮
-    if (isHeartbeatActive.value) {
-      await applyConfigAndRestart()
+    heartbeatInFlight = false
+
+    // 无论成功失败，都重新读取配置并调度下一轮
+    try {
+      const config = await loadConfig()
+      heartbeatInterval.value = config.current_interval * 1000
+      heartbeatPrompt.value = config.prompt
+      console.log(`[💓Heartbeat] config reloaded: interval=${config.current_interval}s`)
     }
+    catch (error) {
+      console.error('[💓Heartbeat] config reload failed, keeping current interval:', error)
+    }
+
+    scheduleNextHeartbeat()
   }
 
   /**
@@ -157,16 +165,34 @@ export const useChatHeartbeatStore = defineStore('chat-heartbeat', () => {
    */
   async function enableHeartbeat(options: HeartbeatOptions) {
     pendingHeartbeatOptions.value = options
-    isHeartbeatActive.value = true
 
-    // 首次加载配置
-    await applyConfigAndRestart()
+    // 重入保护：已经激活就只更新 options，不动定时器
+    if (isHeartbeatActive.value) {
+      console.log('[💓Heartbeat] already active, updated options only')
+      return
+    }
+
+    isHeartbeatActive.value = true
+    console.log('[💓Heartbeat] 🟢 ENABLED')
+
+    // 首次加载配置并启动
+    try {
+      const config = await loadConfig()
+      heartbeatInterval.value = config.current_interval * 1000
+      heartbeatPrompt.value = config.prompt
+    }
+    catch (error) {
+      console.error('[💓Heartbeat] initial config load failed:', error)
+    }
+
+    scheduleNextHeartbeat()
   }
 
   /**
    * 禁用心跳机制
    */
   function disableHeartbeat() {
+    console.log('[💓Heartbeat] 🔴 DISABLED')
     isHeartbeatActive.value = false
     clearHeartbeatTimer()
     pendingHeartbeatOptions.value = null
@@ -183,7 +209,15 @@ export const useChatHeartbeatStore = defineStore('chat-heartbeat', () => {
    * 手动刷新配置并重启定时器
    */
   async function refreshConfig() {
-    await applyConfigAndRestart()
+    try {
+      const config = await loadConfig()
+      heartbeatInterval.value = config.current_interval * 1000
+      heartbeatPrompt.value = config.prompt
+    }
+    catch (error) {
+      console.error('[💓Heartbeat] refreshConfig failed:', error)
+    }
+    scheduleNextHeartbeat()
   }
 
   /**
@@ -192,7 +226,8 @@ export const useChatHeartbeatStore = defineStore('chat-heartbeat', () => {
    */
   function onUserActivity() {
     if (isHeartbeatActive.value) {
-      resetHeartbeatTimer()
+      console.log('[💓Heartbeat] user activity, resetting timer')
+      scheduleNextHeartbeat()
     }
   }
 
@@ -206,7 +241,7 @@ export const useChatHeartbeatStore = defineStore('chat-heartbeat', () => {
     // 方法
     enableHeartbeat,
     disableHeartbeat,
-    resetHeartbeatTimer,
+    resetHeartbeatTimer: scheduleNextHeartbeat,
     updateHeartbeatOptions,
     refreshConfig,
     onUserActivity,

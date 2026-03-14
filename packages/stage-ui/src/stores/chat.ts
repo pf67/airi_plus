@@ -72,8 +72,11 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
       async ({ data }) => {
         const { sendingMessage, options, generation, deferred, sessionId, cancelled, isHeartbeat } = data
 
-        if (cancelled)
+        if (cancelled) {
+          // 必须 reject，否则 ingestHeartbeat 返回的 Promise 永远不 settle，心跳链断裂
+          deferred.reject(new Error('Send was cancelled'))
           return
+        }
 
         if (chatSession.getSessionGeneration(sessionId) !== generation) {
           deferred.reject(new Error('Chat session was reset before send could start'))
@@ -81,10 +84,16 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
         }
 
         try {
+          if (isHeartbeat)
+            console.log('[💓Heartbeat] queue: performSend START')
           await performSend(sendingMessage, options, generation, sessionId, isHeartbeat)
+          if (isHeartbeat)
+            console.log('[💓Heartbeat] queue: performSend END → deferred.resolve()')
           deferred.resolve()
         }
         catch (error) {
+          if (isHeartbeat)
+            console.error('[💓Heartbeat] queue: performSend THREW → deferred.reject()', error)
           deferred.reject(error)
         }
       },
@@ -128,6 +137,8 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
       return
 
     sending.value = true
+    if (isHeartbeat)
+      console.log('[💓Heartbeat] performSend: sending=true (locked)')
 
     const isForegroundSession = () => sessionId === activeSessionId.value
 
@@ -339,6 +350,9 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
 
       await parser.end()
 
+      if (isHeartbeat)
+        console.log(`[💓Heartbeat] stream+parse done, fullText length=${fullText.length}, checking silence...`)
+
       // 心跳消息的 silence 检测
       // 如果 LLM 回复纯 <silence>，则丢弃这条回复，不添加到消息历史
       const isSilenceResponse = isHeartbeat && SILENCE_PATTERN.test(fullText.trim())
@@ -379,16 +393,23 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
         toolCalls: sessionMessagesForSend.filter(msg => msg.role === 'tool') as ToolMessage[],
       }, streamingMessageContext)
 
+      if (isHeartbeat)
+        console.log('[💓Heartbeat] all post-stream hooks done, performSend about to return normally')
+
       if (isForegroundSession()) {
         streamingMessage.value = { role: 'assistant', content: '', slices: [], tool_results: [] }
       }
     }
     catch (error) {
       console.error('Error sending message:', error)
+      if (isHeartbeat)
+        console.error('[💓Heartbeat] performSend: CAUGHT ERROR, will throw to reject deferred')
       throw error
     }
     finally {
       sending.value = false
+      if (isHeartbeat)
+        console.log('[💓Heartbeat] performSend: sending=false (unlocked in finally)')
     }
   }
 
