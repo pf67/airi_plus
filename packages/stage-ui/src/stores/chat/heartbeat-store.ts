@@ -224,9 +224,17 @@ export const useChatHeartbeatStore = defineStore('chat-heartbeat', () => {
    * 用户活动时调用（发送消息等）
    * 重置定时器以延迟心跳
    */
-  function onUserActivity() {
+  async function onUserActivity() {
     if (isHeartbeatActive.value) {
       console.log('[💓Heartbeat] user activity, resetting timer')
+      try {
+        const config = await loadConfig()
+        heartbeatInterval.value = config.current_interval * 1000
+        heartbeatPrompt.value = config.prompt
+      }
+      catch (error) {
+        console.error('[💓Heartbeat] onUserActivity config reload failed:', error)
+      }
       scheduleNextHeartbeat()
     }
   }

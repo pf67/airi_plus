@@ -128,7 +128,7 @@ async function streamFrom(model: string, chatProvider: ChatProvider, messages: M
     }
 
     try {
-      streamText({
+      const result = streamText({
         ...chatConfig,
         maxSteps: 10,
         messages: sanitized,
@@ -137,6 +137,10 @@ async function streamFrom(model: string, chatProvider: ChatProvider, messages: M
         tools,
         onEvent,
       })
+      // Fallback: if all steps complete (e.g. maxSteps exhausted) without a
+      // non-tool_calls finish event, resolve/reject via the steps promise so
+      // the UI lock is always released.
+      result.steps.then(resolveOnce).catch(rejectOnce)
     }
     catch (err) {
       rejectOnce(err)
