@@ -1,18 +1,7 @@
 diff --git a/dist/adapters/electron/main.mjs b/dist/adapters/electron/main.mjs
-index 26cf353c19df2a18f4a3b74820d5390b738eb633..fbcad08a6d4971a509a039eaa386bd4f7805213c 100644
+index 26cf353c19df2a18f4a3b74820d5390b738eb633..c725dfe07b02d782ea0261fe94093969d4222e59 100644
 --- a/dist/adapters/electron/main.mjs
 +++ b/dist/adapters/electron/main.mjs
-@@ -21,8 +21,8 @@ function createContext(ipcMain, window, options) {
- 		if (messageEventName !== false) try {
- 			if (window != null) {
- 				if (window.isDestroyed()) return;
--				if (onlySameWindow) {
--					if (window.webContents.id === options$1?.raw.ipcMainEvent.sender.id) window?.webContents?.send(messageEventName, eventBody);
-+				if (onlySameWindow && options$1?.raw.ipcMainEvent != null) {
-+					if (window.webContents.id === options$1.raw.ipcMainEvent.sender.id) window?.webContents?.send(messageEventName, eventBody);
- 				} else window?.webContents?.send(messageEventName, eventBody);
- 			} else {
- 				if (options$1?.raw.ipcMainEvent.sender.isDestroyed()) return;
 @@ -33,6 +33,7 @@ function createContext(ipcMain, window, options) {
  		}
  	});
