@@ -1,0 +1,14 @@
+{
+  "task_state": {
+    "current_task": "",
+    "current_step": "",
+    "next_action": "",
+    "updated_at": ""
+  },
+  "core_memory": {},
+  "metadata": {
+    "version": 1,
+    "created_at": "",
+    "last_accessed": ""
+  }
+}

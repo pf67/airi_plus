@@ -17,6 +17,7 @@ import { createDatetimeContext } from './chat/context-providers'
 import { useChatContextStore } from './chat/context-store'
 import { SILENCE_PATTERN, useChatHeartbeatStore } from './chat/heartbeat-store'
 import { createChatHooks } from './chat/hooks'
+import { buildSubconsciousBlock, fetchMemorySnapshot } from './chat/memory-manager'
 import { useChatSessionStore } from './chat/session-store'
 import { useChatStreamStore } from './chat/stream-store'
 import { useLLM } from './llm'
@@ -303,6 +304,41 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
       }
 
       streamingMessageContext.composedMessage = newMessages as Message[]
+
+      // === Dynamic Memory & Context Injection (Subconscious Module) ===
+      // Fetch memory snapshot from MCP backend and inject as invisible suffix
+      // on the last user message. This ensures the LLM always has up-to-date
+      // task state and core directives without polluting the UI.
+      try {
+        const memorySnapshot = await fetchMemorySnapshot()
+        const subconsciousBlock = buildSubconsciousBlock(memorySnapshot)
+        if (subconsciousBlock) {
+          // Find the last user message in newMessages and append the block
+          for (let i = newMessages.length - 1; i >= 0; i--) {
+            const msg = newMessages[i] as any
+            if (msg.role === 'user') {
+              if (typeof msg.content === 'string') {
+                msg.content = msg.content + subconsciousBlock
+              }
+              else if (Array.isArray(msg.content)) {
+                // Content is CommonContentPart[] — append to the last text part
+                const lastTextPart = [...msg.content].reverse().find((p: any) => p.type === 'text')
+                if (lastTextPart) {
+                  (lastTextPart as any).text += subconsciousBlock
+                }
+                else {
+                  msg.content.push({ type: 'text', text: subconsciousBlock })
+                }
+              }
+              break
+            }
+          }
+        }
+      }
+      catch (err) {
+        // Memory injection must never break the chat pipeline
+        console.warn('[Subconscious] Failed to inject memory context:', err)
+      }
 
       await hooks.emitAfterMessageComposedHooks(sendingMessage, streamingMessageContext)
       await hooks.emitBeforeSendHooks(sendingMessage, streamingMessageContext)
