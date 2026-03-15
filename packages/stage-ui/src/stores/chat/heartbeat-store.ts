@@ -55,6 +55,9 @@ export const useChatHeartbeatStore = defineStore('chat-heartbeat', () => {
   const pendingHeartbeatOptions = ref<HeartbeatOptions | null>(null)
   // 防止 triggerHeartbeat 重入（上一轮还没结束就被调度）
   let heartbeatInFlight = false
+  // 独立配置轮询定时器（解决长 interval 期间配置变更不生效的问题）
+  let configPollTimer: ReturnType<typeof setInterval> | null = null
+  const CONFIG_POLL_INTERVAL = 30_000 // 每 30 秒检查一次配置文件
 
   /**
    * 从配置源读取最新配置（带超时保护，防止 IPC 挂死）
@@ -161,6 +164,40 @@ export const useChatHeartbeatStore = defineStore('chat-heartbeat', () => {
   }
 
   /**
+   * 启动独立的配置轮询
+   * 每 30 秒检查一次配置文件，如果 interval 发生变化则立即重新调度心跳定时器
+   * 解决：MCP 工具修改配置后，长 interval 期间变更不生效的问题
+   */
+  function startConfigPoll() {
+    stopConfigPoll()
+    configPollTimer = setInterval(async () => {
+      if (!isHeartbeatActive.value)
+        return
+      try {
+        const config = await loadConfig()
+        const newInterval = config.current_interval * 1000
+        if (newInterval !== heartbeatInterval.value) {
+          console.log(`[💓Heartbeat] 🔄 config poll detected change: ${heartbeatInterval.value / 1000}s → ${config.current_interval}s`)
+          heartbeatInterval.value = newInterval
+          heartbeatPrompt.value = config.prompt
+          // interval 变了，立即重新调度（用新的 interval）
+          scheduleNextHeartbeat()
+        }
+      }
+      catch {
+        // 轮询失败不影响正常心跳
+      }
+    }, CONFIG_POLL_INTERVAL)
+  }
+
+  function stopConfigPoll() {
+    if (configPollTimer) {
+      clearInterval(configPollTimer)
+      configPollTimer = null
+    }
+  }
+
+  /**
    * 启用心跳机制
    */
   async function enableHeartbeat(options: HeartbeatOptions) {
@@ -186,6 +223,7 @@ export const useChatHeartbeatStore = defineStore('chat-heartbeat', () => {
     }
 
     scheduleNextHeartbeat()
+    startConfigPoll()
   }
 
   /**
@@ -195,6 +233,7 @@ export const useChatHeartbeatStore = defineStore('chat-heartbeat', () => {
     console.log('[💓Heartbeat] 🔴 DISABLED')
     isHeartbeatActive.value = false
     clearHeartbeatTimer()
+    stopConfigPoll()
     pendingHeartbeatOptions.value = null
   }
 
