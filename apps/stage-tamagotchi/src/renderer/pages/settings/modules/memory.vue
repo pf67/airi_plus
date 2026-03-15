@@ -321,6 +321,10 @@ meta:
   layout: settings
   titleKey: settings.pages.modules.memory.title
   subtitleKey: settings.title
+  descriptionKey: settings.pages.modules.memory.description
+  icon: i-solar:brain-bold-duotone
+  settingsEntry: true
+  order: 7
   stageTransition:
     name: slide
 </route>
