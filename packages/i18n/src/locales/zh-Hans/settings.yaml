@@ -430,6 +430,9 @@ pages:
         opened: 配置文件已于{path}打开
         restarted: >-
           MCP 服务已重新启动，启动了{started}，未启动{failed}，跳过{skipped}
+    memory:
+      title: 记忆中枢
+      description: 管理 Airi 的长期记忆与任务状态
   providers:
     explained:
       chat: 文本生成模型服务来源，例如 OpenRouter, OpenAI, Ollama

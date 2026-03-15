@@ -446,6 +446,9 @@ pages:
         restarted: >-
           MCP servers restarted. Started {started}, failed {failed}, skipped
           {skipped}
+    memory:
+      title: Memory Bank
+      description: Manage Airi's long-term memory and task state
   providers:
     explained:
       chat: Text generation model providers. e.g. OpenRouter, OpenAI, Ollama.
